@@ -3450,9 +3450,25 @@ export default function App() {
         return isPublished && isNotScheduled;
       });
 
-  const filteredArticles = activeCategory === 'À la une' 
-    ? visibleArticles 
-    : visibleArticles.filter(a => a.category === activeCategory);
+  const filteredArticles = useMemo(() => {
+    let base = activeCategory === 'À la une' 
+      ? visibleArticles 
+      : visibleArticles.filter(a => a.category === activeCategory);
+
+    // Filter by followed categories if on "À la une" and user has preferences
+    if (activeCategory === 'À la une' && currentUser && userFollowedCategories.size > 0) {
+      // Sort: Followed categories first, then others
+      return [...base].sort((a, b) => {
+        const aFollowed = userFollowedCategories.has(a.category);
+        const bFollowed = userFollowedCategories.has(b.category);
+        if (aFollowed && !bFollowed) return -1;
+        if (!aFollowed && bFollowed) return 1;
+        return 0;
+      });
+    }
+
+    return base;
+  }, [activeCategory, visibleArticles, currentUser, userFollowedCategories]);
 
   const handleUserLogout = async () => {
     try {
@@ -4271,8 +4287,8 @@ export default function App() {
                   <HeroSlideshow 
                     articles={visibleArticles.slice(0, 3)} 
                     onArticleClick={handleArticleClick} 
-                    onBookmark={() => {}}
-                    bookmarkedIds={new Set()}
+                    onBookmark={handleBookmarkArticle}
+                    bookmarkedIds={userBookmarkedArticles}
                     onAuthorClick={handleAuthorClick}
                     categoryIcons={siteSettings?.categories_icons}
                   />
@@ -4337,8 +4353,8 @@ export default function App() {
                   <TrendingSection 
                     articles={trendingArticles}
                     onArticleClick={handleArticleClick}
-                    onBookmark={() => {}}
-                    bookmarkedIds={new Set()}
+                    onBookmark={handleBookmarkArticle}
+                    bookmarkedIds={userBookmarkedArticles}
                     onAuthorClick={handleAuthorClick}
                     categoryIcons={siteSettings?.categories_icons}
                     onSeeMore={() => handleCategoryClick('Articles')}
@@ -5216,6 +5232,11 @@ export default function App() {
                 }
               }}
               activityLogs={adminLogs}
+              articles={adminArticles}
+              onArticleClick={handleArticleClick}
+              onBookmark={handleBookmarkArticle}
+              bookmarkedIds={userBookmarkedArticles}
+              categoryIcons={siteSettings?.categories_icons}
             />
           ) : currentView === 'donate' ? (
             <motion.div 

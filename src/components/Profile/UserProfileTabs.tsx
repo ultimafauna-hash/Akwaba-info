@@ -35,7 +35,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserProfile, AdminActivityLog } from '../../types';
+import { UserProfile, AdminActivityLog, Article } from '../../types';
 import { cn, safeFormatDate, optimizeImage } from '../../lib/utils';
 import { SupabaseService, signOut } from '../../lib/supabase';
 
@@ -43,6 +43,11 @@ interface UserProfileTabsProps {
   user: UserProfile;
   onUpdate: (updatedUser: Partial<UserProfile>) => Promise<void>;
   activityLogs: AdminActivityLog[];
+  articles: Article[];
+  onArticleClick: (article: Article) => void;
+  onBookmark: (id: string, e: React.MouseEvent) => void;
+  bookmarkedIds: Set<string>;
+  categoryIcons?: Record<string, string>;
 }
 
 const ProfileTab = ({ active, icon: Icon, label, onClick }: { active: boolean, icon: any, label: string, onClick: () => void }) => (
@@ -58,7 +63,16 @@ const ProfileTab = ({ active, icon: Icon, label, onClick }: { active: boolean, i
   </button>
 );
 
-export const UserProfileTabs = ({ user, onUpdate, activityLogs }: UserProfileTabsProps) => {
+export const UserProfileTabs = ({ 
+  user, 
+  onUpdate, 
+  activityLogs,
+  articles,
+  onArticleClick,
+  onBookmark,
+  bookmarkedIds,
+  categoryIcons
+}: UserProfileTabsProps) => {
   const [activeTab, setActiveTab] = useState('personal');
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>(user);
@@ -591,8 +605,78 @@ export const UserProfileTabs = ({ user, onUpdate, activityLogs }: UserProfileTab
     </div>
   );
 
+  const renderReadLater = () => {
+    const bookmarkedArticles = articles.filter(a => user.bookmarkedarticles?.includes(a.id));
+    
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 rounded-2xl text-primary">
+            <FileText size={24} />
+          </div>
+          <div>
+            <h3 className="text-2xl font-black italic">À lire plus tard</h3>
+            <p className="text-slate-400 text-xs font-medium">Articles que vous avez enregistrés pour une lecture ultérieure.</p>
+          </div>
+        </div>
+
+        {bookmarkedArticles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {bookmarkedArticles.map(article => (
+              <div 
+                key={article.id}
+                className="bg-slate-50 rounded-3xl overflow-hidden group hover:shadow-xl transition-all border border-slate-100 flex flex-col h-full"
+              >
+                <div 
+                  className="aspect-video relative overflow-hidden cursor-pointer shrink-0"
+                  onClick={() => onArticleClick(article)}
+                >
+                  <img 
+                    src={optimizeImage(article.image || '', 600)} 
+                    alt={article.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute top-4 right-4">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onBookmark(article.id, e); }}
+                      className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6 flex flex-col flex-1 gap-2">
+                   <div className="flex items-center justify-between">
+                     <span className="text-[9px] font-black uppercase text-primary tracking-widest">{article.category}</span>
+                     <span className="text-[9px] text-slate-400 font-bold">{safeFormatDate(article.date, 'dd MMM yyyy')}</span>
+                   </div>
+                   <h4 
+                    className="font-black text-sm group-hover:text-primary transition-colors cursor-pointer line-clamp-2"
+                    onClick={() => onArticleClick(article)}
+                   >
+                     {article.title}
+                   </h4>
+                   <p className="text-[10px] text-slate-500 line-clamp-2 mt-2">{article.excerpt}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-20 text-center space-y-4">
+            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mx-auto">
+              <FileText size={32} />
+            </div>
+            <p className="text-slate-400 font-bold italic text-sm">Vous n'avez pas encore d'articles enregistrés.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const tabs = [
     { id: 'personal', label: 'Profil', icon: User, render: renderPersonal },
+    { id: 'read-later', label: 'À lire plus tard', icon: FileText, render: renderReadLater },
     { id: 'contact', label: 'Contact', icon: Mail, render: renderContact },
     { id: 'security', label: 'Sécurité', icon: Lock, render: renderSecurity },
     { id: 'kyc', label: 'Vérification', icon: Shield, render: renderKYC },
