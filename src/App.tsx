@@ -356,6 +356,7 @@ const ArticleCard = ({ article, onClick, variant = 'horizontal', onBookmark, isB
   onAuthorClick?: (name: string) => void;
   categoryIcon?: string;
 }) => {
+  if (!article) return null;
   if (variant === 'hero') {
     return (
       <motion.div 
@@ -765,6 +766,7 @@ const EventSection = ({ events, onEventClick, onSeeAll }: { events: Event[], onE
 };
 
 const EventDetailView = ({ event, onBack }: { event: Event, onBack: () => void }) => {
+  if (!event) return null;
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -977,7 +979,11 @@ const AudioPlayer = ({ article }: { article: Article }) => {
       window.speechSynthesis.cancel();
       setIsPlaying(false);
     } else {
-      const textToSpeak = `${article.title}. Par ${article.author}. ${article.excerpt}. ${article.content.substring(0, 1000)}`;
+      const title = article?.title || "Article";
+      const author = article?.author || "Auteur inconnu";
+      const excerpt = article?.excerpt || "";
+      const content = article?.content || "";
+      const textToSpeak = `${title}. Par ${author}. ${excerpt}. ${content.substring(0, 1000)}`;
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = 'fr-FR';
       utterance.onend = () => setIsPlaying(false);
@@ -1111,6 +1117,7 @@ const ClassifiedsView = ({ classifieds, onBack, onAddClick }: { classifieds: Cla
 };
 
 const LiveBlogView = ({ blog, onBack }: { blog: LiveBlog, onBack: () => void }) => {
+  if (!blog) return null;
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -1127,7 +1134,7 @@ const LiveBlogView = ({ blog, onBack }: { blog: LiveBlog, onBack: () => void }) 
           </div>
           <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">Live Blog</span>
         </div>
-        <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-tight italic">{blog.title}</h1>
+        <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-tight italic">{blog.title || 'Live Blog'}</h1>
       </div>
 
       <div className="space-y-12 relative before:absolute before:left-6 before:top-2 before:bottom-0 before:w-px before:bg-slate-100">
@@ -1156,7 +1163,7 @@ const LiveBlogView = ({ blog, onBack }: { blog: LiveBlog, onBack: () => void }) 
             </div>
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
               <div className="markdown-body prose prose-slate max-w-none">
-                <ReactMarkdown>{update.content}</ReactMarkdown>
+                <ReactMarkdown>{update.content || ''}</ReactMarkdown>
               </div>
               {update.imageurl && (
                 <div className="rounded-2xl overflow-hidden shadow-lg">
@@ -1164,7 +1171,7 @@ const LiveBlogView = ({ blog, onBack }: { blog: LiveBlog, onBack: () => void }) 
                 </div>
               )}
               <div className="flex items-center gap-2 pt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <User size={12} /> Par {update.author}
+                <User size={12} /> Par {update.author || 'Rédaction'}
               </div>
             </div>
           </motion.div>
@@ -1453,8 +1460,8 @@ const UnsubscribeView = ({ onHome }: { onHome: () => void }) => {
 const FlashInfo = ({ articles }: { articles: string[] }) => {
   return (
     <div className="bg-slate-900 text-white overflow-hidden h-10 flex items-center relative z-[60]">
-      <div className="bg-primary px-4 h-full flex items-center font-black text-[10px] uppercase tracking-widest shrink-0 relative z-10 shadow-[4px_0_10px_rgba(0,0,0,0.3)]">
-        Flash Info
+      <div className="bg-red-600 px-4 h-full flex items-center font-black text-[10px] uppercase tracking-widest shrink-0 relative z-10 shadow-[4px_0_10px_rgba(0,0,0,0.3)]">
+        Dernières Nouvelles
       </div>
       <div className="flex-1 overflow-hidden relative h-full flex items-center">
         <motion.div 
@@ -3619,19 +3626,22 @@ export default function App() {
   const displayedSearchResults = searchResults.slice(0, visibleSearchCount);
 
   const handleArticleClick = async (article: Article) => {
+    if (!article) return;
     setSelectedArticle(article);
     setCurrentView('article');
     setIsMenuOpen(false);
     window.scrollTo(0, 0);
     
     // Increment views
-    try {
-      await SupabaseService.incrementArticleViews(article.id);
-      if (currentUser) {
-        await SupabaseService.addToReadingHistory(currentUser.uid, article.id);
+    if (article.id) {
+      try {
+        await SupabaseService.incrementArticleViews(article.id);
+        if (currentUser) {
+          await SupabaseService.addToReadingHistory(currentUser.uid, article.id);
+        }
+      } catch (e) {
+        console.warn("View counter error", e);
       }
-    } catch (e) {
-      console.warn("View counter error", e);
     }
   };
 
@@ -4608,11 +4618,11 @@ export default function App() {
                 <button onClick={goHome} className="text-primary text-xs font-bold flex items-center gap-1 justify-center mb-4">
                   <ArrowLeft size={14} /> Retour à l'accueil
                 </button>
-                <Badge category={selectedArticle.category} icon={siteSettings?.categories_icons?.[selectedArticle.category]}>{selectedArticle.category}</Badge>
+                <Badge category={selectedArticle.category} icon={siteSettings?.categories_icons?.[selectedArticle.category]}>{selectedArticle.category || 'Actualité'}</Badge>
                 <h1 className="text-2xl md:text-4xl font-display font-black leading-[1.1] tracking-tight text-slate-900">
-                  {selectedArticle.title}
+                  {selectedArticle.title || 'Sans titre'}
                 </h1>
-                {selectedArticle.tags && selectedArticle.tags.length > 0 && (
+                {selectedArticle.tags && Array.isArray(selectedArticle.tags) && selectedArticle.tags.length > 0 && (
                   <div className="flex flex-wrap justify-center gap-2 mt-2">
                     {selectedArticle.tags.map(tag => (
                       <button 
@@ -4631,12 +4641,12 @@ export default function App() {
                   <div className="flex items-center justify-center gap-4 text-sm text-slate-500 font-sans">
                     <div 
                       className="flex items-center gap-2 cursor-pointer group"
-                      onClick={() => handleAuthorClick(selectedArticle.author)}
+                      onClick={() => handleAuthorClick(selectedArticle.author || 'Rédaction')}
                     >
                       <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-xs group-hover:bg-primary group-hover:text-white transition-colors">
-                        {selectedArticle.author[0]}
+                        {(selectedArticle.author || 'R')[0]}
                       </div>
-                      <span className="font-bold text-slate-900 group-hover:text-primary transition-colors">{selectedArticle.author}</span>
+                      <span className="font-bold text-slate-900 group-hover:text-primary transition-colors">{selectedArticle.author || 'Rédaction'}</span>
                       {selectedArticle.authorrole && (
                         <span className="text-[10px] bg-primary/5 text-primary px-2 py-0.5 rounded font-bold uppercase ml-1">
                           {selectedArticle.authorrole}

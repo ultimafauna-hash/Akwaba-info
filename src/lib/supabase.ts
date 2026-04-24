@@ -32,8 +32,13 @@ export const SupabaseService = {
   // Articles
   async getArticles(): Promise<Article[]> {
     if (isPlaceholder) {
-      const saved = localStorage.getItem('akwaba_articles');
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem('akwaba_articles');
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error('Error parsing akwaba_articles from localStorage:', e);
+        return [];
+      }
     }
     const { data, error } = await supabase
       .from('articles')
@@ -993,8 +998,13 @@ export const SupabaseService = {
   // Culture Posts
   async getCulturePosts(): Promise<CulturePost[]> {
     if (isPlaceholder) {
-      const saved = localStorage.getItem('akwaba_culture');
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem('akwaba_culture');
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error('Error parsing akwaba_culture from localStorage:', e);
+        return [];
+      }
     }
     const { data, error } = await supabase
       .from('culture_posts')
@@ -1007,8 +1017,13 @@ export const SupabaseService = {
 
   async getAllCulturePosts(): Promise<CulturePost[]> {
     if (isPlaceholder) {
-      const saved = localStorage.getItem('akwaba_culture');
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem('akwaba_culture');
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error('Error parsing akwaba_culture (all) from localStorage:', e);
+        return [];
+      }
     }
     const { data, error } = await supabase
       .from('culture_posts')

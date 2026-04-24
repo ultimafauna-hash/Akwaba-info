@@ -223,6 +223,7 @@ export const CultureSection = ({ posts, onPostClick, onSeeAll }: { posts: Cultur
 };
 
 export const CultureDetailView = ({ post, onBack }: { post: CulturePost, onBack: () => void }) => {
+  if (!post) return null;
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.98 }}
@@ -258,15 +259,15 @@ export const CultureDetailView = ({ post, onBack }: { post: CulturePost, onBack:
           <div className="absolute bottom-6 md:bottom-12 left-6 md:left-12 right-6 md:right-12 text-white">
             <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-4 md:mb-6">
                 <span className={cn("px-4 md:px-5 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-lg", categoryConfig[post.category]?.bg || 'bg-slate-100', categoryConfig[post.category]?.text || 'text-slate-900')}>
-                    {post.category}
+                    {post.category || 'Culture'}
                 </span>
                 <div className="flex items-center gap-2 text-white/80 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">
                     <MapPin size={14} />
-                    {post.region}
+                    {post.region || 'Afrique'}
                 </div>
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-6xl font-black African-title tracking-tight max-w-4xl text-white drop-shadow-2xl leading-tight">
-              {post.title}
+              {post.title || 'Sans titre'}
             </h1>
           </div>
         </header>
@@ -278,16 +279,16 @@ export const CultureDetailView = ({ post, onBack }: { post: CulturePost, onBack:
                         <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rédigé par</span>
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black text-xs md:text-base">
-                                {post.author[0]}
+                                {(post.author || 'A')[0]}
                             </div>
-                            <span className="font-black text-xs md:text-sm">{post.author}</span>
+                            <span className="font-black text-xs md:text-sm">{post.author || 'Rédaction'}</span>
                         </div>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Période</span>
                         <div className="flex items-center gap-2">
                              <Calendar size={16} className="text-primary md:w-[18px] md:h-[18px]" />
-                             <span className="font-black text-xs md:text-sm">{post.period}</span>
+                             <span className="font-black text-xs md:text-sm">{post.period || 'Non précisé'}</span>
                         </div>
                     </div>
                     <div className="flex flex-col">
@@ -300,7 +301,7 @@ export const CultureDetailView = ({ post, onBack }: { post: CulturePost, onBack:
                 </div>
 
                 <div className="prose prose-slate African-content max-w-none">
-                    <ReactMarkdown>{post.content}</ReactMarkdown>
+                    <ReactMarkdown>{post.content || ''}</ReactMarkdown>
                 </div>
 
                 {post.video && getYoutubeId(post.video) && (
