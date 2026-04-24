@@ -2079,18 +2079,27 @@ const safeSession = {
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'article' | 'search' | 'donate' | 'about' | 'privacy' | 'terms' | 'contact' | 'cookies' | 'event' | 'all-events' | 'admin' | 'admin-login' | 'webtv' | 'profile' | 'classifieds' | 'live-blog' | 'author-profile' | 'authors' | 'unsubscribe' | 'culture-detail' | 'all-culture'>(() => {
-    return (safeStorage.get('akwaba_current_view') as any) || 'home';
+    const saved = safeStorage.get('akwaba_current_view');
+    if (saved === 'article') {
+      // Only allow article view if we have an article ID saved
+      return safeStorage.get('akwaba_selected_article_id') ? 'article' : 'home';
+    }
+    return (saved as any) || 'home';
   });
 
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(() => {
     const savedId = safeStorage.get('akwaba_selected_article_id');
     if (savedId) {
-      const savedArticles = safeStorage.get('akwaba_admin_articles');
       try {
-        const articles = savedArticles ? JSON.parse(savedArticles) : MOCK_ARTICLES;
-        return articles.find((a: Article) => a.id === savedId) || null;
-      } catch {
-        return MOCK_ARTICLES.find(a => a.id === savedId) || null;
+        const savedArticlesStr = safeStorage.get('akwaba_admin_articles');
+        const articles = savedArticlesStr ? JSON.parse(savedArticlesStr) : MOCK_ARTICLES;
+        // Search by ID first, then by slug
+        return articles.find((a: Article) => a.id === savedId || a.slug === savedId) || 
+               MOCK_ARTICLES.find(a => a.id === savedId || a.slug === savedId) || 
+               null;
+      } catch (e) {
+        console.error("Error loading selected article:", e);
+        return MOCK_ARTICLES.find(a => a.id === savedId || a.slug === savedId) || null;
       }
     }
     return null;
@@ -5108,7 +5117,7 @@ export default function App() {
                           </div>
                           <div>
                             <h5 className="font-bold text-xs leading-tight group-hover:text-primary transition-colors line-clamp-2">{article.title}</h5>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase mt-1 block">{article.date.split('T')[0]}</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase mt-1 block">{safeFormatDate(article.date, 'dd MMM yyyy')}</span>
                           </div>
                         </div>
                       ))}

@@ -1,15 +1,43 @@
 import { Article, Event, Author, CulturePost } from './types';
-import matter from 'gray-matter';
+
+// Custom lightweight frontmatter parser for browser compatibility 
+function parseMatter(text: string) {
+  const match = text.match(/^---\r?\n([\s\S]+?)\r?\n---/);
+  if (!match) return { data: {}, content: text };
+  
+  const yaml = match[1];
+  const content = text.slice(match[0].length).trim();
+  const data: Record<string, any> = {};
+  
+  yaml.split('\n').forEach((line: string) => {
+    const colonIndex = line.indexOf(':');
+    if (colonIndex !== -1) {
+      const key = line.slice(0, colonIndex).trim();
+      const value = line.slice(colonIndex + 1).trim()
+        .replace(/^['"](.*)['"]$/, '$1'); // Remove quotes
+      
+      // Simple type conversion
+      if (value === 'true') data[key] = true;
+      else if (value === 'false') data[key] = false;
+      else if (!isNaN(Number(value)) && value !== '') data[key] = Number(value);
+      else data[key] = value;
+    }
+  });
+  
+  return { data, content };
+}
 
 // Import all markdown files from the articles directory recursively
 const articleFiles = import.meta.glob('./articles/**/*.md', { 
-  as: 'raw', 
-  eager: true
+  query: '?raw', 
+  eager: true,
+  import: 'default'
 }) as Record<string, string>;
 
 const eventFiles = import.meta.glob('./evenements/**/*.md', { 
-  as: 'raw', 
-  eager: true
+  query: '?raw', 
+  eager: true,
+  import: 'default'
 }) as Record<string, string>;
 
 if (Object.keys(articleFiles).length === 0) {
@@ -19,7 +47,7 @@ if (Object.keys(articleFiles).length === 0) {
 export const MOCK_ARTICLES: Article[] = Object.entries(articleFiles).map(([path, content], index) => {
   try {
     const rawContent = typeof content === 'string' ? content : (content as any).default || '';
-    const { data, content: body } = matter(rawContent);
+    const { data, content: body } = parseMatter(rawContent);
     const slug = path.split('/').pop()?.replace('.md', '') || `article-${index}`;
     
     return {
@@ -110,7 +138,7 @@ export const MOCK_AUTHORS: Author[] = [
 export const MOCK_EVENTS: Event[] = Object.entries(eventFiles).map(([path, content], index) => {
   try {
     const rawContent = typeof content === 'string' ? content : (content as any).default || '';
-    const { data, content: body } = matter(rawContent);
+    const { data, content: body } = parseMatter(rawContent);
     const slug = path.split('/').pop()?.replace('.md', '') || `event-${index}`;
     
     return {
