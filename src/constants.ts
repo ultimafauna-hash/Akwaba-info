@@ -18,11 +18,12 @@ if (Object.keys(articleFiles).length === 0) {
 
 export const MOCK_ARTICLES: Article[] = Object.entries(articleFiles).map(([path, content], index) => {
   try {
-    const { data, content: body } = matter(content);
+    const rawContent = typeof content === 'string' ? content : (content as any).default || '';
+    const { data, content: body } = matter(rawContent);
     const slug = path.split('/').pop()?.replace('.md', '') || `article-${index}`;
     
     return {
-      id: String(index + 1),
+      id: slug,
       slug,
       title: data.title || 'Sans titre',
       date: data.date || new Date().toISOString(),
@@ -108,11 +109,12 @@ export const MOCK_AUTHORS: Author[] = [
 
 export const MOCK_EVENTS: Event[] = Object.entries(eventFiles).map(([path, content], index) => {
   try {
-    const { data, content: body } = matter(content);
+    const rawContent = typeof content === 'string' ? content : (content as any).default || '';
+    const { data, content: body } = matter(rawContent);
     const slug = path.split('/').pop()?.replace('.md', '') || `event-${index}`;
     
     return {
-      id: String(index + 1),
+      id: slug,
       slug,
       title: data.title || 'Sans titre',
       date: data.date || new Date().toISOString(),

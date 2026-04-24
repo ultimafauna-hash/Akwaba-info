@@ -4737,17 +4737,21 @@ export default function App() {
                   
                   <div className="markdown-body text-base md:text-lg leading-relaxed relative">
                     {(() => {
-                      const isPremiumArticle = selectedArticle.ispremium;
-                      const hasAccess = !isPremiumArticle || (currentUser && currentUser.isPremium);
+                      if (!selectedArticle) return null;
                       
-                      const content = selectedArticle.content || '';
-                      const paragraphs = content.split('\n\n');
+                      const isPremiumArticle = selectedArticle.ispremium;
+                      const hasAccess = !isPremiumArticle || (currentUser && (currentUser.isPremium || currentUser.role === 'admin' || currentUser.role === 'editor'));
+                      
+                      const currentContent = typeof selectedArticle.content === 'string' ? selectedArticle.content : '';
+                      if (!currentContent) return <p className="text-slate-400 italic">Cet article n'a pas de contenu.</p>;
+                      
+                      const paragraphs = currentContent.split('\n\n').filter(p => p.trim().length > 0);
 
                       if (!hasAccess && paragraphs.length > 2) {
                         return (
                           <div className="space-y-6">
                             <ReactMarkdown>{paragraphs.slice(0, 2).join('\n\n')}</ReactMarkdown>
-                              <div className="relative z-10 py-20 px-8 rounded-[40px] bg-slate-900 text-white overflow-hidden text-center space-y-6 shadow-2xl">
+                            <div className="relative z-10 py-20 px-8 rounded-[40px] bg-slate-900 text-white overflow-hidden text-center space-y-6 shadow-2xl">
                                <div className="absolute inset-0 opacity-10 safari-blur pointer-events-none">
                                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-primary/20 to-transparent" />
                                </div>
@@ -4779,25 +4783,30 @@ export default function App() {
                             <ReactMarkdown>{paragraphs.slice(0, 2).join('\n\n')}</ReactMarkdown>
                             <GoogleAd className="my-10" label="Publicité contextuelle" />
                             <ReactMarkdown>{paragraphs.slice(2, 4).join('\n\n')}</ReactMarkdown>
+                            {adminArticles && adminArticles.length > 0 && (
+                              <ReadAlso 
+                                currentArticle={selectedArticle} 
+                                articles={adminArticles} 
+                                onArticleClick={handleArticleClick} 
+                                onAuthorClick={handleAuthorClick}
+                              />
+                            )}
+                            <ReactMarkdown>{paragraphs.slice(4).join('\n\n')}</ReactMarkdown>
+                          </>
+                        );
+                      }
+                      
+                      return (
+                        <>
+                          <ReactMarkdown>{currentContent}</ReactMarkdown>
+                          {adminArticles && adminArticles.length > 0 && (
                             <ReadAlso 
                               currentArticle={selectedArticle} 
                               articles={adminArticles} 
                               onArticleClick={handleArticleClick} 
                               onAuthorClick={handleAuthorClick}
                             />
-                            <ReactMarkdown>{paragraphs.slice(4).join('\n\n')}</ReactMarkdown>
-                          </>
-                        );
-                      }
-                      return (
-                        <>
-                          <ReactMarkdown>{content}</ReactMarkdown>
-                          <ReadAlso 
-                            currentArticle={selectedArticle} 
-                            articles={adminArticles} 
-                            onArticleClick={handleArticleClick} 
-                            onAuthorClick={handleAuthorClick}
-                          />
+                          )}
                         </>
                       );
                     })()}

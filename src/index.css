@@ -81,3 +81,8 @@
   scrollbar-width: none;
 }
 
+.safari-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
