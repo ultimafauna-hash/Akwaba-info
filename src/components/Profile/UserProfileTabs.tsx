@@ -48,6 +48,7 @@ interface UserProfileTabsProps {
   onBookmark: (id: string, e: React.MouseEvent) => void;
   bookmarkedIds: Set<string>;
   categoryIcons?: Record<string, string>;
+  playNotificationSound?: (type: any) => void;
 }
 
 const ProfileTab = ({ active, icon: Icon, label, onClick }: { active: boolean, icon: any, label: string, onClick: () => void }) => (
@@ -71,17 +72,99 @@ export const UserProfileTabs = ({
   onArticleClick,
   onBookmark,
   bookmarkedIds,
-  categoryIcons
+  categoryIcons,
+  playNotificationSound
 }: UserProfileTabsProps) => {
   const [activeTab, setActiveTab] = useState('personal');
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>(user);
+  const [mfaData, setMfaData] = useState<{ qrCode: string, id: string } | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [showMfaModal, setShowMfaModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await onUpdate(formData);
-      // Show success notification (handled by parent?)
+      alert("Profil mis à jour avec succès !");
+    } catch (e: any) {
+      alert("Erreur lors de la mise à jour : " + e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover' | 'kyc') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsSaving(true);
+      const bucket = type === 'kyc' ? 'kyc-documents' : 'avatars';
+      const path = `${user.uid}/${type}_${Date.now()}_${file.name}`;
+      const url = await SupabaseService.uploadFile(bucket, path, file);
+      
+      if (type === 'avatar') {
+        setFormData(prev => ({ ...prev, photourl: url }));
+        await onUpdate({ photourl: url });
+      } else if (type === 'cover') {
+        setFormData(prev => ({ ...prev, cover_image: url }));
+        await onUpdate({ cover_image: url });
+      } else if (type === 'kyc') {
+        const docs = [...(formData.kyc_documents || []), { url, type: file.type, date: new Date().toISOString() }];
+        setFormData(prev => ({ ...prev, kyc_documents: docs, kyc_status: 'pending' }));
+        await SupabaseService.submitKYCDocuments(user.uid, docs);
+      }
+    } catch (err: any) {
+      alert("Erreur lors de l'upload : " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEnrollMFA = async () => {
+    try {
+      setIsSaving(true);
+      const data = await SupabaseService.enrollMFA();
+      setMfaData(data);
+      setShowMfaModal(true);
+    } catch (err: any) {
+      alert("Erreur MFA : " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleVerifyMFA = async () => {
+    if (!mfaData) return;
+    try {
+      setIsSaving(true);
+      await SupabaseService.verifyMFA(mfaData.id, mfaCode);
+      setShowMfaModal(false);
+      setFormData(prev => ({ ...prev, two_factor_enabled: true }));
+      alert("MFA activé avec succès !");
+    } catch (err: any) {
+      alert("Code invalide : " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      alert("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    try {
+      setIsSaving(true);
+      await SupabaseService.updatePassword(newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      alert("Mot de passe changé !");
+    } catch (err: any) {
+      alert("Erreur mot de passe : " + err.message);
     } finally {
       setIsSaving(false);
     }
@@ -90,20 +173,21 @@ export const UserProfileTabs = ({
   const renderPersonal = () => (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row gap-8 items-start">
-        <div className="relative group">
+        <div className="relative group mx-auto md:mx-0">
           <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-100">
             <img 
-              src={optimizeImage(user.photourl || `https://ui-avatars.com/api/?name=${user.displayname}`, 400)} 
+              src={optimizeImage(formData.photourl || `https://ui-avatars.com/api/?name=${user.displayname}`, 400)} 
               alt={user.displayname} 
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
           </div>
-          <button className="absolute bottom-1 right-1 w-10 h-10 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all">
+          <label className="absolute bottom-1 right-1 w-10 h-10 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all cursor-pointer">
             <Camera size={18} />
-          </button>
+            <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'avatar')} />
+          </label>
         </div>
-        <div className="flex-1 space-y-4 pt-2">
+        <div className="flex-1 space-y-4 pt-2 text-center md:text-left">
             <h3 className="text-2xl font-black italic">Informations Personnelles</h3>
             <p className="text-slate-400 text-xs font-medium">Gérez votre identité publique et vos informations de base.</p>
         </div>
@@ -162,14 +246,15 @@ export const UserProfileTabs = ({
             <img src={formData.cover_image} className="w-full h-full object-cover" alt="Cover" referrerPolicy="no-referrer" />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 gap-2">
-              <ImageIcon size={40} />
+              <Camera size={40} />
               <span className="text-[10px] font-black uppercase tracking-widest">Aucune image</span>
             </div>
           )}
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-             <button className="bg-white text-slate-900 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl hover:bg-primary hover:text-white transition-all">
+             <label className="bg-white text-slate-900 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl hover:bg-primary hover:text-white transition-all cursor-pointer">
                 Changer la couverture
-             </button>
+                <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'cover')} />
+             </label>
           </div>
         </div>
       </div>
@@ -195,7 +280,22 @@ export const UserProfileTabs = ({
               className="w-full bg-slate-50/50 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-slate-400 cursor-not-allowed"
             />
           </div>
-          <button className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline px-2">Changer d'email principal</button>
+          <button 
+            onClick={async () => {
+              const newEmail = prompt("Entrez votre nouvelle adresse email :");
+              if (newEmail && newEmail.includes('@')) {
+                try {
+                  await SupabaseService.updateUserEmail(newEmail);
+                  alert("Un lien de confirmation a été envoyé à votre nouvelle adresse. Veuillez le valider pour finaliser le changement.");
+                } catch (e: any) {
+                  alert("Erreur : " + e.message);
+                }
+              }
+            }}
+            className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline px-2"
+          >
+            Changer d'email principal
+          </button>
         </div>
 
         <div className="space-y-2">
@@ -347,6 +447,7 @@ export const UserProfileTabs = ({
            </div>
 
            <button 
+            onClick={user.is_2fa_enabled ? () => SupabaseService.disable2FA(user.uid).then(() => setFormData(p => ({...p, is_2fa_enabled: false}))) : handleEnrollMFA}
             className={cn(
                "w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all",
                user.is_2fa_enabled ? "bg-red-50 text-red-500 hover:bg-red-100" : "bg-primary text-white hover:bg-slate-900 shadow-xl shadow-primary/20"
@@ -362,24 +463,33 @@ export const UserProfileTabs = ({
                 <Lock size={20} />
               </div>
               <div>
-                <h4 className="font-black text-sm uppercase tracking-widest leading-none">Code PIN de Sécurité</h4>
-                <p className="text-[10px] text-slate-400 font-bold mt-1">Utilisé pour les transactions sensibles.</p>
+                <h4 className="font-black text-sm uppercase tracking-widest leading-none">Changer le mot de passe</h4>
+                <p className="text-[10px] text-slate-400 font-bold mt-1">Évitez les mots de passe trop simples.</p>
               </div>
            </div>
            
-           <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-              <span className="text-xs font-bold text-slate-600">Statut du PIN</span>
-              <span className={cn(
-                "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest",
-                user.pin_code_hash ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
-              )}>
-                {user.pin_code_hash ? "Configuré" : "Non configuré"}
-              </span>
+           <div className="space-y-4">
+              <input 
+                type="password" 
+                placeholder="Nouveau mot de passe"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className="w-full bg-white rounded-xl px-4 py-3 text-xs outline-none border border-slate-100"
+              />
+              <input 
+                type="password" 
+                placeholder="Confirmer"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full bg-white rounded-xl px-4 py-3 text-xs outline-none border border-slate-100"
+              />
+              <button 
+                onClick={handlePasswordChange}
+                className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-primary transition-all"
+              >
+                Mettre à jour le mot de passe
+              </button>
            </div>
-
-           <button className="w-full py-4 rounded-2xl bg-white text-slate-900 border border-slate-200 font-black text-xs uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all">
-             {user.pin_code_hash ? "Modifier le Code PIN" : "Créer un Code PIN"}
-           </button>
         </div>
 
         <div className="lg:col-span-2 space-y-6">
@@ -392,24 +502,33 @@ export const UserProfileTabs = ({
             </div>
 
             <div className="space-y-3">
-               {[1, 2].map(i => (
-                 <div key={i} className="bg-white border border-slate-100 rounded-2xl p-5 flex items-center justify-between group hover:shadow-lg transition-all">
+               {[
+                 { device: 'iPhone 15 Pro', browser: 'Safari', location: 'Abidjan, CI', status: 'Actuel', icon: '📱' },
+                 { device: 'MacBook Air M2', browser: 'Chrome', location: 'Paris, FR', status: 'Il y a 2h', icon: '💻' }
+               ].map((session, idx) => (
+                 <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-5 flex items-center justify-between group hover:shadow-lg transition-all dark:bg-slate-900/50 dark:border-slate-800">
                     <div className="flex items-center gap-4">
-                       <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all">
-                          <Monitor size={20} />
+                       <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-xl shadow-sm border border-slate-100 dark:border-slate-700 group-hover:bg-primary/10 transition-all">
+                          {session.icon}
                        </div>
                        <div>
-                          <p className="text-xs font-black">Chrome sur Windows</p>
-                          <p className="text-[10px] text-slate-400 font-bold">Dernière activité : Il y a 5 min • Abidjan, CI</p>
+                          <h4 className="font-black text-xs uppercase tracking-tight">{session.device}</h4>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{session.browser} • {session.location}</p>
                        </div>
                     </div>
-                    {i === 1 ? (
-                      <span className="bg-emerald-100 text-emerald-600 text-[9px] font-black px-3 py-1 rounded-full uppercase">Session Actuelle</span>
-                    ) : (
-                      <button className="text-slate-300 hover:text-red-500 transition-colors p-2">
-                        <Trash2 size={16} />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                       <span className={cn(
+                         "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
+                         session.status === 'Actuel' ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-500"
+                       )}>
+                         {session.status}
+                       </span>
+                       {idx !== 0 && (
+                         <button className="text-slate-300 hover:text-red-500 transition-colors p-2">
+                           <Trash2 size={16} />
+                         </button>
+                       )}
+                    </div>
                  </div>
                ))}
             </div>
@@ -427,14 +546,14 @@ export const UserProfileTabs = ({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          {[
-           { level: 1, title: 'Basique', status: 'completed', desc: 'Email & Téléphone validés', color: 'bg-slate-500' },
-           { level: 2, title: 'Intermédiaire', status: 'current', desc: 'Pièce d\'identité requise', color: 'bg-primary' },
-           { level: 3, title: 'Avancé', status: 'pending', desc: 'Justificatif de domicile', color: 'bg-secondary' }
+           { level: 1, title: 'Basique', desc: 'Email & Téléphone validés', color: 'bg-slate-500' },
+           { level: 2, title: 'Intermédiaire', desc: 'Pièce d\'identité requise', color: 'bg-primary' },
+           { level: 3, title: 'Avancé', desc: 'Justificatif de domicile', color: 'bg-secondary' }
          ].map((lvl, idx) => (
            <div key={idx} className={cn(
              "relative p-8 rounded-[2.5rem] border-2 transition-all flex flex-col items-center text-center space-y-4 overflow-hidden",
-             lvl.status === 'completed' ? "border-emerald-500/20 bg-emerald-50/10" : 
-             lvl.status === 'current' ? "border-primary bg-primary/5 shadow-2xl scale-105" : "border-slate-100 opacity-50"
+             user.kyc_level >= lvl.level ? "border-emerald-500/20 bg-emerald-50/10" : 
+             user.kyc_level === lvl.level - 1 ? "border-primary bg-primary/5 shadow-2xl scale-105" : "border-slate-100 opacity-50"
            )}>
               <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg", lvl.color)}>
                 {lvl.level}
@@ -443,14 +562,22 @@ export const UserProfileTabs = ({
               <p className="text-[10px] text-slate-500 font-bold italic">{lvl.desc}</p>
               
               <div className="pt-4 w-full">
-                {lvl.status === 'completed' ? (
+                {user.kyc_level >= lvl.level ? (
                   <div className="flex items-center justify-center gap-2 text-emerald-500 text-[10px] font-black uppercase">
-                    <CheckCircle size={14} /> Validé
+                    <CheckCircle size={14} /> Validé 🟢
                   </div>
-                ) : lvl.status === 'current' ? (
-                  <button className="w-full bg-primary text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
-                    Démarrer la vérification
-                  </button>
+                ) : user.kyc_level === lvl.level - 1 ? (
+                  <div className="space-y-4 w-full">
+                    <label className="w-full block bg-primary text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 cursor-pointer text-center">
+                      {user.kyc_status === 'pending' ? 'Verification en cours... 🟡' : 'Démarrer la vérification'}
+                      <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'kyc')} />
+                    </label>
+                    {user.kyc_status === 'rejected' && (
+                       <div className="text-red-500 text-[10px] font-black uppercase flex items-center justify-center gap-1 mt-2">
+                         <AlertTriangle size={14} /> Refusé 🔴
+                       </div>
+                    )}
+                  </div>
                 ) : (
                    <span className="text-slate-300 text-[10px] font-black uppercase">Veuillez valider le niveau {lvl.level - 1}</span>
                 )}
@@ -590,12 +717,19 @@ export const UserProfileTabs = ({
                        <span className="text-xs font-bold text-slate-600">{item.label}</span>
                     </div>
                     <button 
+                      onClick={() => {
+                        const newValue = !(formData as any)[item.id];
+                        setFormData({...formData, [item.id]: newValue});
+                        if (item.id === 'notif_sounds' && newValue && playNotificationSound) {
+                          playNotificationSound('info');
+                        }
+                      }}
                       className={cn(
                         "w-12 h-6 rounded-full relative transition-colors duration-300",
-                        true ? "bg-primary" : "bg-slate-300"
+                        (formData as any)[item.id] !== false ? "bg-primary" : "bg-slate-300"
                       )}
                     >
-                      <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300", true ? "right-1" : "left-1")} />
+                      <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300", (formData as any)[item.id] !== false ? "right-1" : "left-1")} />
                     </button>
                  </div>
                ))}
@@ -764,6 +898,48 @@ export const UserProfileTabs = ({
            </div>
         </main>
       </div>
+
+      <AnimatePresence>
+        {showMfaModal && mfaData && (
+          <div className="fixed inset-0 z-[6000] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setShowMfaModal(false)}
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[2rem] p-8 max-w-sm w-full relative z-10 text-center space-y-6"
+            >
+              <h3 className="text-xl font-black italic">Configurer la 2FA</h3>
+              <p className="text-xs text-slate-500">Scannez ce QR code avec Google Authenticator ou une app similaire.</p>
+              <div className="bg-slate-50 p-4 rounded-3xl mx-auto w-fit">
+                 <img src={mfaData.qrCode} alt="2FA QR Code" className="w-48 h-48" />
+              </div>
+              <div className="space-y-2">
+                <input 
+                  type="text" 
+                  placeholder="Entrez le code à 6 chiffres"
+                  value={mfaCode}
+                  onChange={e => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full bg-slate-50 rounded-2xl px-4 py-4 text-center font-black tracking-widest outline-none focus:ring-4 focus:ring-primary/10"
+                  maxLength={6}
+                />
+                <button 
+                  onClick={handleVerifyMFA}
+                  className="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+                >
+                  Vérifier et Activer
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

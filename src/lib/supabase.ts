@@ -311,6 +311,21 @@ export const SupabaseService = {
 
   async updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<void> {
     if (isPlaceholder) return;
+    
+    // Check username uniqueness if it's being updated
+    if (data.username) {
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('uid')
+        .eq('username', data.username.toLowerCase())
+        .maybeSingle();
+      
+      if (checkError && checkError.code !== 'PGRST116') throw checkError;
+      if (existingUser && existingUser.uid !== userId) {
+        throw new Error("Ce nom d'utilisateur est déjà utilisé.");
+      }
+    }
+
     const { error } = await supabase
       .from('profiles')
       .update(data)
@@ -960,6 +975,21 @@ export const SupabaseService = {
     await supabase.from('stories').delete().eq('id', id);
   },
 
+  // Media & Upload
+  async uploadFile(bucket: string, path: string, file: File): Promise<string> {
+    if (isPlaceholder) return "https://via.placeholder.com/400";
+    
+    const { error } = await supabase.storage.from(bucket).upload(path, file, {
+      upsert: true,
+      contentType: file.type
+    });
+    
+    if (error) throw error;
+    
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    return data.publicUrl;
+  },
+
   // Culture Posts
   async getCulturePosts(): Promise<CulturePost[]> {
     if (isPlaceholder) {
@@ -1026,9 +1056,19 @@ export const SupabaseService = {
     if (error) throw error;
   },
 
+  async updateUserEmail(newEmail: string): Promise<void> {
+    if (isPlaceholder) return;
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    if (error) throw error;
+  },
+
   // User Profile Advanced
   async updateUsername(userId: string, username: string): Promise<void> {
     if (isPlaceholder) return;
+    // Check uniqueness first
+    const { data } = await supabase.from('profiles').select('uid').eq('username', username).single();
+    if (data && data.uid !== userId) throw new Error("Ce nom d'utilisateur est déjà pris.");
+    
     const { error } = await supabase.from('profiles').update({ username }).eq('uid', userId);
     if (error) throw error;
   },
@@ -1180,10 +1220,30 @@ export const SupabaseService = {
     };
   },
 
-  async verify2FACode(userId: string, code: string): Promise<boolean> {
-    if (isPlaceholder) return code === '123456';
-    // Logic for 2FA verification (e.g. check against a secret stored in another table or just simulate for now)
-    return code === '123456'; 
+  async updatePassword(password: string): Promise<void> {
+    if (isPlaceholder) return;
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+  },
+
+  async enrollMFA(): Promise<{ qrCode: string, id: string }> {
+    if (isPlaceholder) return { qrCode: "data:image/png;base64,mock", id: "mock" };
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: 'totp',
+      issuer: 'Akwaba Info',
+      friendlyName: 'Default'
+    });
+    if (error) throw error;
+    return { qrCode: data.totp.qr_code, id: data.id };
+  },
+
+  async verifyMFA(factorId: string, code: string): Promise<void> {
+    if (isPlaceholder) return;
+    const { error } = await supabase.auth.mfa.challengeAndVerify({
+      factorId,
+      code
+    });
+    if (error) throw error;
   },
 
   async verifyPIN(userId: string, pin: string): Promise<boolean> {

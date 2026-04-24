@@ -73,9 +73,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (mode === 'login') {
         if (!password) {
           // Magic Link flow
-          await signInWithPassword(email, '');
-          const msg = "Lien magique envoyé ! Vérifiez votre boîte mail.";
+          await signInWithOtp(email);
+          const msg = "Lien magique envoyé ! Veuillez vérifier votre boîte de réception (et vos spams) pour vous connecter.";
           setSuccessMessage(msg);
+          setIsVerificationPending(true); // Treat it as pending verification to show the check-mail UI
           if (setActiveNotification) setActiveNotification({ message: msg, type: 'success' });
         } else {
           const user: any = await signInWithPassword(email, password);
@@ -191,7 +192,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   Un lien magique de confirmation a été envoyé à <span className="text-primary font-bold">{email}</span>.
                 </p>
                 <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 font-medium italic mt-4">
-                  "Vous devez cliquer sur le lien dans l'email pour activer votre compte avant de pouvoir vous connecter."
+                  "N'oubliez pas de vérifier vos <span className="text-primary font-bold">courriers indésirables (Spams)</span>. Vous devez cliquer sur le lien dans l'email pour activer votre compte."
                 </div>
               </div>
               <div className="pt-4">

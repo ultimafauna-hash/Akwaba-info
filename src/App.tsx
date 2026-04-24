@@ -4332,7 +4332,7 @@ export default function App() {
                         </button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {personalizedArticles.map(article => (
+                        {personalizedArticles?.map(article => (
                           <ArticleCard 
                             key={article.id}
                             article={article}
@@ -5237,6 +5237,7 @@ export default function App() {
               onBookmark={handleBookmarkArticle}
               bookmarkedIds={userBookmarkedArticles}
               categoryIcons={siteSettings?.categories_icons}
+              playNotificationSound={playNotificationSound}
             />
           ) : currentView === 'donate' ? (
             <motion.div 

@@ -250,51 +250,51 @@ export const CultureDetailView = ({ post, onBack }: { post: CulturePost, onBack:
       </div>
       
       <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 अफ्रीकी-detail-view pb-16">
-        <header className="relative w-full aspect-[21/9] African-header-pattern">
+        <header className="relative w-full aspect-square md:aspect-[21/9] African-header-pattern">
           {post.image && (
             <img src={post.image} className="w-full h-full object-cover" alt={post.title} referrerPolicy="no-referrer" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-          <div className="absolute bottom-12 left-12 right-12 text-white">
-            <div className="flex items-center gap-4 mb-6">
-                <span className={cn("px-5 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-lg", categoryConfig[post.category]?.bg || 'bg-slate-100', categoryConfig[post.category]?.text || 'text-slate-900')}>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent" />
+          <div className="absolute bottom-6 md:bottom-12 left-6 md:left-12 right-6 md:right-12 text-white">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-4 md:mb-6">
+                <span className={cn("px-4 md:px-5 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-lg", categoryConfig[post.category]?.bg || 'bg-slate-100', categoryConfig[post.category]?.text || 'text-slate-900')}>
                     {post.category}
                 </span>
-                <div className="flex items-center gap-2 text-white/80 font-bold uppercase tracking-widest text-[10px]">
+                <div className="flex items-center gap-2 text-white/80 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">
                     <MapPin size={14} />
                     {post.region}
                 </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-black African-title tracking-tight max-w-4xl text-white drop-shadow-xl">
+            <h1 className="text-3xl md:text-4xl lg:text-6xl font-black African-title tracking-tight max-w-4xl text-white drop-shadow-2xl leading-tight">
               {post.title}
             </h1>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 p-12">
-            <div className="lg:col-span-8 space-y-12">
-                <div className="flex items-center gap-8 py-8 border-y border-slate-50">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 p-6 md:p-12">
+            <div className="lg:col-span-8 space-y-8 md:space-y-12">
+                <div className="flex flex-wrap items-center gap-6 md:gap-8 py-6 md:py-8 border-y border-slate-100">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rédigé par</span>
+                        <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rédigé par</span>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black">
+                            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black text-xs md:text-base">
                                 {post.author[0]}
                             </div>
-                            <span className="font-black text-sm">{post.author}</span>
+                            <span className="font-black text-xs md:text-sm">{post.author}</span>
                         </div>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Période</span>
+                        <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Période</span>
                         <div className="flex items-center gap-2">
-                             <Calendar size={18} className="text-primary" />
-                             <span className="font-black text-sm">{post.period}</span>
+                             <Calendar size={16} className="text-primary md:w-[18px] md:h-[18px]" />
+                             <span className="font-black text-xs md:text-sm">{post.period}</span>
                         </div>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Temps de lecture</span>
+                        <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Lecture</span>
                         <div className="flex items-center gap-2">
-                             <Clock size={18} className="text-primary" />
-                             <span className="font-black text-sm">{post.readingtime}</span>
+                             <Clock size={16} className="text-primary md:w-[18px] md:h-[18px]" />
+                             <span className="font-black text-xs md:text-sm">{post.readingtime}</span>
                         </div>
                     </div>
                 </div>

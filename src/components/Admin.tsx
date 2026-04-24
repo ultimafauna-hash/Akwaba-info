@@ -916,7 +916,7 @@ export const AdminDashboard = ({
               transition={{ duration: 0.2 }}
               className="max-w-[1600px] mx-auto"
             >
-              {(activeTab === 'articles' || activeTab === 'events' || activeTab === 'polls' || activeTab === 'live-blog' || activeTab === 'web-tv' || activeTab === 'classifieds') && (
+              {(activeTab === 'articles' || activeTab === 'events' || activeTab === 'polls' || activeTab === 'live-blog' || activeTab === 'web-tv' || activeTab === 'classifieds' || activeTab === 'culture') && (
                  <div className="mb-8 flex flex-col md:flex-row items-center justify-between bg-white dark:bg-slate-900 p-4 md:p-6 rounded-[30px] border border-slate-100 dark:border-slate-800 shadow-sm gap-4 transition-colors">
                     <div className="flex items-center gap-4 flex-1 w-full">
                       <div className="relative group max-w-none md:max-w-md w-full">
@@ -938,10 +938,11 @@ export const AdminDashboard = ({
                         else if (activeTab === 'live-blog') onCreateLiveBlog();
                         else if (activeTab === 'web-tv') onCreateWebTV();
                         else if (activeTab === 'classifieds') onCreateClassified();
+                        else if (activeTab === 'culture') onCreateCulturePost();
                       }}
                       className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-primary text-white font-black rounded-[18px] text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
                     >
-                      <Plus size={16} /> NOUVEU {activeTab.slice(0, -1)}
+                      <Plus size={16} /> NOUVEAU {activeTab === 'culture' ? 'POST CULTURE' : activeTab.slice(0, -1).toUpperCase()}
                     </button>
                  </div>
               )}
@@ -2464,8 +2465,8 @@ export const AdminDashboard = ({
           {(activeTab === 'articles' || activeTab === 'events' || activeTab === 'live-blog' || activeTab === 'comments' || activeTab === 'classifieds' || activeTab === 'culture') && (
             <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
               <div className="grid grid-cols-12 px-6 py-4 bg-slate-50/50 border-bottom border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <div className="col-span-6">Nom / Titre</div>
-                <div className="col-span-2">
+                <div className="col-span-8 md:col-span-6">Nom / Titre</div>
+                <div className="hidden md:block col-span-2">
                   {activeTab === 'articles' ? 'Catégorie' : 
                    activeTab === 'events' ? 'Lieu' : 
                    activeTab === 'comments' ? 'Source' :
@@ -2473,28 +2474,28 @@ export const AdminDashboard = ({
                    activeTab === 'culture' ? 'Période' :
                    'Info'}
                 </div>
-                <div className="col-span-2">Date / Stats</div>
-                <div className="col-span-2 text-right">Actions</div>
+                <div className="hidden sm:block col-span-2">Date / Stats</div>
+                <div className="col-span-4 md:col-span-2 text-right">Actions</div>
               </div>
               <div className="divide-y divide-slate-100">
                 {activeTab === 'articles' && filteredArticles.map(article => (
                   <div key={article.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-slate-50/50 transition-colors group">
-                    <div className="col-span-6 flex items-center gap-4">
+                    <div className="col-span-8 md:col-span-6 flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
                         {article.image && <img src={article.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-bold text-slate-900 leading-tight line-clamp-1">{article.title}</h4>
-                        <p className="text-[10px] text-slate-400 font-medium">Par {article.author}</p>
+                        <p className="text-[10px] text-slate-400 font-medium whitespace-nowrap">Par {article.author}</p>
                       </div>
                     </div>
-                    <div className="col-span-2 text-xs font-bold text-slate-600 italic">
+                    <div className="hidden md:block col-span-2 text-xs font-bold text-slate-600 italic">
                       {article.category}
                     </div>
-                    <div className="col-span-2 text-xs text-slate-500 font-mono">
+                    <div className="hidden sm:block col-span-2 text-xs text-slate-500 font-mono">
                       <div className="text-[10px] font-bold text-slate-400 uppercase">{safeFormatDateAdmin(article.date)}</div>
                     </div>
-                    <div className="col-span-2 flex justify-end gap-2 pr-2">
+                    <div className="col-span-4 md:col-span-2 flex justify-end gap-1 md:gap-2 pr-0 md:pr-2">
                       <button 
                         onClick={() => onEditArticle(article)}
                         className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
@@ -2513,22 +2514,22 @@ export const AdminDashboard = ({
 
                 {activeTab === 'events' && filteredEvents.map(event => (
                   <div key={event.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-slate-50/50 transition-colors group">
-                    <div className="col-span-6 flex items-center gap-4">
+                    <div className="col-span-8 md:col-span-6 flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
                         {event.image && <img src={event.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-bold text-slate-900 leading-tight line-clamp-1">{event.title}</h4>
                         <p className="text-[10px] text-slate-400 font-medium">{event.category}</p>
                       </div>
                     </div>
-                    <div className="col-span-2 text-xs font-bold text-slate-600 line-clamp-1">
+                    <div className="hidden md:block col-span-2 text-xs font-bold text-slate-600 line-clamp-1">
                       {event.location}
                     </div>
-                    <div className="col-span-2 text-xs text-slate-500 font-mono">
+                    <div className="hidden sm:block col-span-2 text-xs text-slate-500 font-mono">
                       <div className="text-[10px] font-bold text-slate-400 uppercase">{safeFormatDateAdmin(event.date)}</div>
                     </div>
-                    <div className="col-span-2 flex justify-end gap-2 pr-2">
+                    <div className="col-span-4 md:col-span-2 flex justify-end gap-1 md:gap-2 pr-0 md:pr-2">
                       <button 
                         onClick={() => onEditEvent(event)}
                         className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
@@ -2547,22 +2548,22 @@ export const AdminDashboard = ({
 
                 {activeTab === 'culture' && culturePosts.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase())).map(post => (
                   <div key={post.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-slate-50/50 transition-colors group">
-                    <div className="col-span-6 flex items-center gap-4">
+                    <div className="col-span-8 md:col-span-6 flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
                         {post.image && <img src={post.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-bold text-slate-900 leading-tight line-clamp-1">{post.title}</h4>
                         <p className="text-[10px] text-slate-400 font-medium">{post.period} • {post.region}</p>
                       </div>
                     </div>
-                    <div className="col-span-2 text-xs font-bold text-slate-600 italic uppercase">
+                    <div className="hidden md:block col-span-2 text-xs font-bold text-slate-600 italic uppercase">
                        {post.category}
                     </div>
-                    <div className="col-span-2 text-xs text-slate-500 font-mono">
+                    <div className="hidden sm:block col-span-2 text-xs text-slate-500 font-mono">
                       <div className="text-[10px] font-bold text-slate-400 uppercase">{post.views || 0} vues</div>
                     </div>
-                    <div className="col-span-2 flex justify-end gap-2 pr-2">
+                    <div className="col-span-4 md:col-span-2 flex justify-end gap-1 md:gap-2 pr-0 md:pr-2">
                       <button 
                         onClick={() => onEditCulturePost(post)}
                         className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
