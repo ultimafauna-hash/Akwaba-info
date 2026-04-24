@@ -157,6 +157,8 @@ const Badge = ({ children, category, icon }: { children: React.ReactNode; catego
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  if (!articles || articles.length === 0) return null;
+
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentIndex((prev) => (prev + 1) % articles.length);
@@ -2036,15 +2038,47 @@ const SplashScreen = ({ isDarkMode }: { isDarkMode: boolean }) => {
   );
 };
 
+// State persistence helpers
+const safeStorage = {
+  get: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch { return null; }
+  },
+  set: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch { /* Ignore */ }
+  },
+  remove: (key: string) => {
+    try {
+      localStorage.removeItem(key);
+    } catch { /* Ignore */ }
+  }
+};
+
+const safeSession = {
+  get: (key: string) => {
+    try {
+      return sessionStorage.getItem(key);
+    } catch { return null; }
+  },
+  set: (key: string, value: string) => {
+    try {
+      sessionStorage.setItem(key, value);
+    } catch { /* Ignore */ }
+  }
+};
+
 export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'article' | 'search' | 'donate' | 'about' | 'privacy' | 'terms' | 'contact' | 'cookies' | 'event' | 'all-events' | 'admin' | 'admin-login' | 'webtv' | 'profile' | 'classifieds' | 'live-blog' | 'author-profile' | 'authors' | 'unsubscribe' | 'culture-detail' | 'all-culture'>(() => {
-    return (localStorage.getItem('akwaba_current_view') as any) || 'home';
+    return (safeStorage.get('akwaba_current_view') as any) || 'home';
   });
 
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(() => {
-    const savedId = localStorage.getItem('akwaba_selected_article_id');
+    const savedId = safeStorage.get('akwaba_selected_article_id');
     if (savedId) {
-      const savedArticles = localStorage.getItem('akwaba_admin_articles');
+      const savedArticles = safeStorage.get('akwaba_admin_articles');
       try {
         const articles = savedArticles ? JSON.parse(savedArticles) : MOCK_ARTICLES;
         return articles.find((a: Article) => a.id === savedId) || null;
@@ -2056,14 +2090,14 @@ export default function App() {
   });
   const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
-    return localStorage.getItem('akwaba_is_admin') === 'true';
+    return safeStorage.get('akwaba_is_admin') === 'true';
   });
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [adminArticles, setAdminArticles] = useState<Article[]>(() => {
     try {
-      const saved = localStorage.getItem('akwaba_admin_articles');
+      const saved = safeStorage.get('akwaba_admin_articles');
       if (saved) {
         const parsed = JSON.parse(saved);
         return Array.isArray(parsed) && parsed.length > 0 ? parsed : MOCK_ARTICLES;
@@ -2075,7 +2109,7 @@ export default function App() {
   });
   const [adminEvents, setAdminEvents] = useState<Event[]>(() => {
     try {
-      const saved = localStorage.getItem('akwaba_admin_events');
+      const saved = safeStorage.get('akwaba_admin_events');
       if (saved) {
         const parsed = JSON.parse(saved);
         return Array.isArray(parsed) && parsed.length > 0 ? parsed : MOCK_EVENTS;
@@ -2088,7 +2122,7 @@ export default function App() {
 
   const [adminCulturePosts, setAdminCulturePosts] = useState<CulturePost[]>(() => {
     try {
-      const saved = localStorage.getItem('akwaba_admin_culture');
+      const saved = safeStorage.get('akwaba_admin_culture');
       if (saved) {
         const parsed = JSON.parse(saved);
         return Array.isArray(parsed) && parsed.length > 0 ? parsed : MOCK_CULTURE;
@@ -2117,7 +2151,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(() => {
     // Show splash only once per session
-    return !sessionStorage.getItem('akwaba_splash_shown');
+    return !safeSession.get('akwaba_splash_shown');
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<string>('5000');
@@ -2269,26 +2303,26 @@ export default function App() {
 
   // Persist important state
   useEffect(() => {
-    localStorage.setItem('akwaba_current_view', currentView);
+    safeStorage.set('akwaba_current_view', currentView);
   }, [currentView]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_is_admin', isAdminAuthenticated.toString());
+    safeStorage.set('akwaba_is_admin', isAdminAuthenticated.toString());
   }, [isAdminAuthenticated]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_admin_articles', JSON.stringify(adminArticles));
+    safeStorage.set('akwaba_admin_articles', JSON.stringify(adminArticles));
   }, [adminArticles]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_admin_events', JSON.stringify(adminEvents));
+    safeStorage.set('akwaba_admin_events', JSON.stringify(adminEvents));
   }, [adminEvents]);
 
   useEffect(() => {
     if (selectedArticle) {
-      localStorage.setItem('akwaba_selected_article_id', selectedArticle.id);
+      safeStorage.set('akwaba_selected_article_id', selectedArticle.id);
     } else {
-      localStorage.removeItem('akwaba_selected_article_id');
+      safeStorage.remove('akwaba_selected_article_id');
     }
   }, [selectedArticle]);
 
@@ -2416,38 +2450,52 @@ export default function App() {
   
   // Persistence Logic
   const [articleComments, setArticleComments] = useState<Record<string, Comment[]>>(() => {
-    const saved = localStorage.getItem('akwaba_comments');
-    return saved ? JSON.parse(saved) : {};
+    const saved = safeStorage.get('akwaba_comments');
+    try {
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
   });
   
   const [articleLikes, setArticleLikes] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('akwaba_likes');
-    return saved ? JSON.parse(saved) : {};
+    const saved = safeStorage.get('akwaba_likes');
+    try {
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
   });
 
   const [userLikedArticles, setUserLikedArticles] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('akwaba_user_likes');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
+    const saved = safeStorage.get('akwaba_user_likes');
+    try {
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
   });
 
   const [userBookmarkedArticles, setUserBookmarkedArticles] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('akwaba_user_bookmarks');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
+    const saved = safeStorage.get('akwaba_user_bookmarks');
+    try {
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
   });
 
   const [userFollowedAuthors, setUserFollowedAuthors] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('akwaba_user_followed_authors');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
+    const saved = safeStorage.get('akwaba_user_followed_authors');
+    try {
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
   });
 
   const [userFollowedCategories, setUserFollowedCategories] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('akwaba_user_followed_categories');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
+    const saved = safeStorage.get('akwaba_user_followed_categories');
+    try {
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
   });
 
   const [userInterests, setUserInterests] = useState<string[]>(() => {
-    const saved = localStorage.getItem('akwaba_user_interests');
-    return saved ? JSON.parse(saved) : [];
+    const saved = safeStorage.get('akwaba_user_interests');
+    try {
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
 
   const [userPoints, setUserPoints] = useState(0);
@@ -2465,31 +2513,31 @@ export default function App() {
   const [commentAuthorName, setCommentAuthorName] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('akwaba_comments', JSON.stringify(articleComments));
+    safeStorage.set('akwaba_comments', JSON.stringify(articleComments));
   }, [articleComments]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_likes', JSON.stringify(articleLikes));
+    safeStorage.set('akwaba_likes', JSON.stringify(articleLikes));
   }, [articleLikes]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_user_likes', JSON.stringify(Array.from(userLikedArticles)));
+    safeStorage.set('akwaba_user_likes', JSON.stringify(Array.from(userLikedArticles)));
   }, [userLikedArticles]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_user_followed_categories', JSON.stringify(Array.from(userFollowedCategories)));
+    safeStorage.set('akwaba_user_followed_categories', JSON.stringify(Array.from(userFollowedCategories)));
   }, [userFollowedCategories]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_user_interests', JSON.stringify(userInterests));
+    safeStorage.set('akwaba_user_interests', JSON.stringify(userInterests));
   }, [userInterests]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_admin_articles', JSON.stringify(adminArticles));
+    safeStorage.set('akwaba_admin_articles', JSON.stringify(adminArticles));
   }, [adminArticles]);
 
   useEffect(() => {
-    localStorage.setItem('akwaba_admin_events', JSON.stringify(adminEvents));
+    safeStorage.set('akwaba_admin_events', JSON.stringify(adminEvents));
   }, [adminEvents]);
 
   const currentViewRef = useRef(currentView);
@@ -2546,7 +2594,7 @@ export default function App() {
         
         if (isAdminEmail) {
           setIsAdminAuthenticated(true);
-          localStorage.setItem('akwaba_is_admin', 'true');
+          safeStorage.set('akwaba_is_admin', 'true');
           
           // Auto-redirect admin to dashboard if they are on login page or just arriving via magic link/new session
           const isMagicLinkRedirect = window.location.hash.includes('access_token=') || window.location.search.includes('code=');
@@ -2557,12 +2605,12 @@ export default function App() {
           }
         } else {
           setIsAdminAuthenticated(false);
-          localStorage.setItem('akwaba_is_admin', 'false');
+          safeStorage.set('akwaba_is_admin', 'false');
         }
       } else {
         setCurrentUser(null);
         setIsAdminAuthenticated(false);
-        localStorage.setItem('akwaba_is_admin', 'false');
+        safeStorage.set('akwaba_is_admin', 'false');
       }
       setIsAuthChecked(true);
     });
@@ -3639,7 +3687,7 @@ export default function App() {
 
   const navigateTo = (view: typeof currentView) => {
     setCurrentView(view);
-    localStorage.setItem('akwaba_current_view', view);
+    safeStorage.set('akwaba_current_view', view);
     setSelectedArticle(null);
     setSelectedEvent(null);
     setSelectedAuthor(null);
@@ -4369,7 +4417,7 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <h2 className="font-black text-2xl md:text-3xl uppercase tracking-tighter italic dark:text-white">
-                      {activeCategory === 'À la une' ? 'Dernières Nouvelles' : activeCategory}
+                      {activeCategory === 'À la une' ? <span className="text-red-600">Dernières Nouvelles</span> : activeCategory}
                     </h2>
                   </div>
                   {activeCategory !== 'À la une' && (
