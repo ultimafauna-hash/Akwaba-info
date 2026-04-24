@@ -153,7 +153,7 @@ const GitHubImageUpload = ({
       reader.onload = async () => {
         const base64 = (reader.result as string).split(',')[1];
         const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
-        const token = import.meta.env.VITE_GITHUB_TOKEN;
+        const token = process.env.VITE_GITHUB_TOKEN;
 
         if (!token) {
           alert("Erreur: VITE_GITHUB_TOKEN n'est pas configurée.");

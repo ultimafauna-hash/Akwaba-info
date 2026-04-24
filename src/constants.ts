@@ -1,19 +1,24 @@
 import { Article, Event, Author, CulturePost } from './types';
 import matter from 'gray-matter';
-import { Buffer } from 'buffer';
-
-// Polyfill Buffer for gray-matter in the browser environment
-if (typeof window !== 'undefined' && !window.Buffer) {
-  window.Buffer = Buffer;
-}
 
 // Import all markdown files from the articles directory recursively
-const articleFiles = (import.meta as any).glob('./articles/**/*.md', { query: '?raw', eager: true });
-const eventFiles = (import.meta as any).glob('./evenements/**/*.md', { query: '?raw', eager: true });
+const articleFiles = import.meta.glob('./articles/**/*.md', { 
+  as: 'raw', 
+  eager: true
+}) as Record<string, string>;
+
+const eventFiles = import.meta.glob('./evenements/**/*.md', { 
+  as: 'raw', 
+  eager: true
+}) as Record<string, string>;
+
+if (Object.keys(articleFiles).length === 0) {
+  console.warn("No articles found via import.meta.glob. Check your file structure.");
+}
 
 export const MOCK_ARTICLES: Article[] = Object.entries(articleFiles).map(([path, content], index) => {
   try {
-    const { data, content: body } = matter((content as any).default || content);
+    const { data, content: body } = matter(content);
     const slug = path.split('/').pop()?.replace('.md', '') || `article-${index}`;
     
     return {
@@ -103,7 +108,7 @@ export const MOCK_AUTHORS: Author[] = [
 
 export const MOCK_EVENTS: Event[] = Object.entries(eventFiles).map(([path, content], index) => {
   try {
-    const { data, content: body } = matter((content as any).default || content);
+    const { data, content: body } = matter(content);
     const slug = path.split('/').pop()?.replace('.md', '') || `event-${index}`;
     
     return {

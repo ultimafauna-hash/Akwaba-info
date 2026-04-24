@@ -19,12 +19,15 @@ import {
   AdminActivityLog
 } from '../types';
 
+const supabaseUrl = process.env.VITE_SUPABASE_URL || supabaseConfig.supabaseUrl;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || supabaseConfig.supabaseAnonKey;
+
 export const supabase = createClient(
-  supabaseConfig.supabaseUrl,
-  supabaseConfig.supabaseAnonKey
+  supabaseUrl || '',
+  supabaseAnonKey || ''
 );
 
-const isPlaceholder = !supabaseConfig.supabaseUrl || supabaseConfig.supabaseUrl.includes('example.com');
+const isPlaceholder = !supabaseUrl || supabaseUrl.includes('example.com');
 
 // --- Supabase Database Services ---
 
